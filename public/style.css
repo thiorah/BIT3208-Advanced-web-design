@@ -1,0 +1,116 @@
+body{
+    font-family: Arial;
+    background: #000;
+    color: #fff;
+    padding: 20px;
+}
+
+.site-title{
+    color: red;
+    font-size: 40px;
+    text-align: center;
+    margin: 0 0 20px 0;
+}
+
+.container{
+    max-width: 1000px;
+    margin: auto;
+    background: #111;
+    padding: 20px;
+    border-radius: 10px;
+    box-sizing: border-box;
+}
+
+.split{
+    display: flex;
+    gap: 20px;
+}
+
+.left, .right{
+    flex: 1;
+}
+
+.left input, .left button{
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    box-sizing: border-box;
+    background: #222;
+    color: #fff;
+    border: 1px solid #333;
+}
+
+button{
+    background: blue;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.right table{
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    background: #fff;
+    color: #000;
+}
+
+.right table, .right th, .right td{
+    border: 1px solid #444;
+}
+
+.right th, .right td{
+    padding: 10px;
+}
+
+/* Auth (login/register) centered white box */
+.auth-wrapper{
+    min-height: calc(100vh - 40px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.auth-box{
+    background: #fff;
+    color: #000;
+    padding: 30px;
+    border-radius: 8px;
+    width: 360px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.6);
+    box-sizing: border-box;
+}
+
+.auth-box h2{
+    margin-top: 0;
+    text-align: center;
+}
+
+.auth-box input{
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #fff;
+    color: #000;
+}
+
+.auth-box button{
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    background: blue;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.auth-box a{
+    color: blue;
+    display: block;
+    text-align: center;
+    margin-top: 12px;
+}
