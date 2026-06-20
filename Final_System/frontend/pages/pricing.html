@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pricing & Services – Calvin's Repairs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 14px;
+            margin-bottom: 30px;
+        }
+        .price-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: border-color 0.2s;
+        }
+        .price-card:hover { border-color: rgba(255,107,53,0.4); }
+        .price-card-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .repair-type-name {
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 15px;
+        }
+        .price-tag {
+            font-family: 'Syne', sans-serif;
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--accent);
+        }
+        .price-tag span { font-size: 12px; font-weight: 400; color: var(--muted); }
+        .price-desc { font-size: 13px; color: var(--muted); line-height: 1.5; }
+        .price-meta { display: flex; gap: 10px; align-items: center; }
+        .meta-tag {
+            font-size: 11px;
+            padding: 3px 9px;
+            border-radius: 20px;
+            background: rgba(68,136,255,0.1);
+            color: var(--info);
+        }
+        .device-section-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            margin: 30px 0 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .device-section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+        .device-icon { font-size: 22px; }
+    </style>
+</head>
+<body>
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <a href="/dashboard" class="nav-brand">🔧 Calvin's <span>Repairs</span></a>
+        <div class="nav-links">
+            <a href="/dashboard" class="nav-link">Dashboard</a>
+            <a href="/tickets" class="nav-link">Tickets</a>
+            <a href="/pricing" class="nav-link active">Pricing</a>
+        </div>
+        <div class="nav-user">
+            <span class="nav-user-name" id="user-name">Loading...</span>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="page-wrapper">
+        <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:14px">
+            <div>
+                <h1>Services & Pricing</h1>
+                <p>All repair types, pricing, and estimated turnaround times</p>
+            </div>
+            <button class="btn btn-primary" onclick="openAddModal()">+ Add Service</button>
+        </div>
+
+        <!-- Filter chips -->
+        <div class="filter-chips" id="filter-chips">
+            <button class="chip active" onclick="filterBy('All', this)">All</button>
+        </div>
+
+        <!-- Services content -->
+        <div id="services-content">
+            <div style="text-align:center;padding:80px;color:var(--muted)">Loading services...</div>
+        </div>
+    </div>
+
+    <!-- Add Service Modal -->
+    <div class="modal-overlay" id="add-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Add New Service</h3>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert" id="service-alert"></div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Device Type</label>
+                        <select id="svc-device">
+                            <option value="Smartphone">Smartphone</option>
+                            <option value="Tablet">Tablet</option>
+                            <option value="Laptop">Laptop</option>
+                            <option value="Accessory">Accessory</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Repair Type</label>
+                        <input type="text" id="svc-repair" placeholder="e.g. Screen Replacement">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="svc-desc" placeholder="Brief description of the repair"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Price (KES)</label>
+                        <input type="number" id="svc-price" placeholder="2500">
+                    </div>
+                    <div class="form-group">
+                        <label>Duration (hours)</label>
+                        <input type="number" id="svc-duration" placeholder="2">
+                    </div>
+                </div>
+                <div style="display:flex;gap:10px;margin-top:6px">
+                    <button class="btn btn-primary" style="flex:1" onclick="addService()">Add Service</button>
+                    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allServices = [];
+        let activeFilter = 'All';
+
+        // Auth guard
+        fetch('/api/auth/me').then(r => r.json()).then(d => {
+            if (!d.success) window.location.href = '/';
+            else document.getElementById('user-name').textContent = d.user.name;
+        });
+
+        const deviceIcons = {
+            'Smartphone': '📱', 'Tablet': '📟', 'Laptop': '💻', 'Accessory': '🎧', 'Other': '🔧'
+        };
+
+        async function loadServices() {
+            const r = await fetch('/api/services');
+            const d = await r.json();
+            if (!d.success) return;
+            allServices = d.data;
+
+            // Build filter chips
+            const devices = [...new Set(allServices.map(s => s.device_type))];
+            const chipsEl = document.getElementById('filter-chips');
+            chipsEl.innerHTML = `<button class="chip active" onclick="filterBy('All', this)">All</button>` +
+                devices.map(dev => `<button class="chip" onclick="filterBy('${dev}', this)">${deviceIcons[dev] || '🔧'} ${dev}</button>`).join('');
+
+            renderServices('All');
+        }
+
+        function filterBy(filter, btn) {
+            activeFilter = filter;
+            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            renderServices(filter);
+        }
+
+        function renderServices(filter) {
+            const filtered = filter === 'All' ? allServices : allServices.filter(s => s.device_type === filter);
+            if (filtered.length === 0) {
+                document.getElementById('services-content').innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><p>No services found.</p></div>`;
+                return;
+            }
+
+            // Group by device type
+            const grouped = {};
+            filtered.forEach(s => {
+                if (!grouped[s.device_type]) grouped[s.device_type] = [];
+                grouped[s.device_type].push(s);
+            });
+
+            let html = '';
+            for (const [device, services] of Object.entries(grouped)) {
+                html += `
+                    <div class="device-section-title">
+                        <span class="device-icon">${deviceIcons[device] || '🔧'}</span> ${device} Repairs
+                    </div>
+                    <div class="pricing-grid">
+                        ${services.map(s => `
+                            <div class="price-card" id="svc-${s.id}">
+                                <div class="price-card-header">
+                                    <span class="repair-type-name">${s.repair_type}</span>
+                                    <div class="price-tag">KES ${Number(s.price).toLocaleString()}<span>/repair</span></div>
+                                </div>
+                                <p class="price-desc">${s.description || 'Professional repair service'}</p>
+                                <div class="price-meta">
+                                    <span class="meta-tag">⏱ ${s.duration_hours}h est.</span>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteService(${s.id})" style="margin-left:auto">Delete</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>`;
+            }
+            document.getElementById('services-content').innerHTML = html;
+        }
+
+        function openAddModal() { document.getElementById('add-modal').classList.add('open'); }
+        function closeModal() { document.getElementById('add-modal').classList.remove('open'); }
+
+        async function addService() {
+            const body = {
+                device_type: document.getElementById('svc-device').value,
+                repair_type: document.getElementById('svc-repair').value.trim(),
+                description: document.getElementById('svc-desc').value.trim(),
+                price: document.getElementById('svc-price').value,
+                duration_hours: document.getElementById('svc-duration').value || 1
+            };
+            if (!body.repair_type || !body.price)
+                return showAlert('service-alert', 'Repair type and price are required', 'error');
+
+            const r = await fetch('/api/services', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            const d = await r.json();
+            if (d.success) {
+                showAlert('service-alert', 'Service added!', 'success');
+                setTimeout(() => { closeModal(); loadServices(); }, 800);
+            } else {
+                showAlert('service-alert', d.message, 'error');
+            }
+        }
+
+        async function deleteService(id) {
+            if (!confirm('Delete this service?')) return;
+            const r = await fetch(`/api/services/${id}`, { method: 'DELETE' });
+            const d = await r.json();
+            if (d.success) loadServices();
+            else alert('Error: ' + d.message);
+        }
+
+        function showAlert(id, msg, type) {
+            const el = document.getElementById(id);
+            el.textContent = msg;
+            el.className = `alert ${type} show`;
+            setTimeout(() => el.classList.remove('show'), 4000);
+        }
+
+        async function logout() {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            window.location.href = '/';
+        }
+
+        loadServices();
+    </script>
+</body>
+</html>

@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repair Tickets – Calvin's Repairs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <a href="/dashboard" class="nav-brand">🔧 Calvin's <span>Repairs</span></a>
+        <div class="nav-links">
+            <a href="/dashboard" class="nav-link">Dashboard</a>
+            <a href="/tickets" class="nav-link active">Tickets</a>
+            <a href="/pricing" class="nav-link">Pricing</a>
+        </div>
+        <div class="nav-user">
+            <span class="nav-user-name" id="user-name">Loading...</span>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="page-wrapper">
+        <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:14px">
+            <div>
+                <h1>Repair Tickets</h1>
+                <p>Create, track and manage all customer repair jobs</p>
+            </div>
+            <button class="btn btn-primary" onclick="openTicketModal()">+ New Ticket</button>
+        </div>
+
+        <!-- Filters & Search -->
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+            <input class="search-bar" type="text" id="search-input" placeholder="🔍  Search tickets..." oninput="filterTickets()">
+            <div class="filter-chips" style="margin:0">
+                <button class="chip active" onclick="setStatusFilter('All', this)">All</button>
+                <button class="chip" onclick="setStatusFilter('Pending', this)">Pending</button>
+                <button class="chip" onclick="setStatusFilter('In Progress', this)">In Progress</button>
+                <button class="chip" onclick="setStatusFilter('Completed', this)">Completed</button>
+                <button class="chip" onclick="setStatusFilter('Delivered', this)">Delivered</button>
+            </div>
+        </div>
+
+        <!-- Tickets Table -->
+        <div class="section-card">
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ticket #</th>
+                            <th>Customer</th>
+                            <th>Device</th>
+                            <th>Repair Service</th>
+                            <th>Status</th>
+                            <th>Amount (KES)</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tickets-tbody">
+                        <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--muted)">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Ticket Modal -->
+    <div class="modal-overlay" id="ticket-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>New Repair Ticket</h3>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert" id="ticket-alert"></div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Customer Name</label>
+                        <input type="text" id="t-custname" placeholder="Full name">
+                    </div>
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="text" id="t-phone" placeholder="07XXXXXXXX">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Device Type</label>
+                        <select id="t-device" onchange="loadServicesForDevice()">
+                            <option value="">Select device...</option>
+                            <option value="Smartphone">Smartphone</option>
+                            <option value="Tablet">Tablet</option>
+                            <option value="Laptop">Laptop</option>
+                            <option value="Accessory">Accessory</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Device Model</label>
+                        <input type="text" id="t-model" placeholder="e.g. Samsung A53">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Repair Service</label>
+                    <select id="t-service" onchange="autoFillPrice()">
+                        <option value="">Select a service...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Issue Description</label>
+                    <textarea id="t-issue" placeholder="Describe the problem in detail..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Total Price (KES)</label>
+                    <input type="number" id="t-price" placeholder="Auto-filled from service">
+                </div>
+                <div style="display:flex;gap:10px;margin-top:6px">
+                    <button class="btn btn-primary" style="flex:1" onclick="createTicket()">Create Ticket</button>
+                    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Status Modal -->
+    <div class="modal-overlay" id="status-modal">
+        <div class="modal" style="max-width:360px">
+            <div class="modal-header">
+                <h3>Update Status</h3>
+                <button class="modal-close" onclick="closeStatusModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p style="color:var(--muted);margin-bottom:16px;font-size:14px">Ticket: <strong id="status-ticket-num" style="color:var(--accent)"></strong></p>
+                <div class="form-group">
+                    <label>New Status</label>
+                    <select id="status-select">
+                        <option value="Pending">Pending</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Delivered">Delivered</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" style="width:100%" onclick="updateStatus()">Update Status</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allTickets = [];
+        let allServices = [];
+        let activeStatus = 'All';
+        let editingTicketId = null;
+
+        // Auth guard
+        fetch('/api/auth/me').then(r => r.json()).then(d => {
+            if (!d.success) window.location.href = '/';
+            else document.getElementById('user-name').textContent = d.user.name;
+        });
+
+        const statusMap = {
+            'Pending': 'badge-pending',
+            'In Progress': 'badge-progress',
+            'Completed': 'badge-completed',
+            'Delivered': 'badge-delivered'
+        };
+
+        async function loadTickets() {
+            const r = await fetch('/api/tickets');
+            const d = await r.json();
+            allTickets = d.success ? d.data : [];
+            renderTickets();
+        }
+
+        async function loadAllServices() {
+            const r = await fetch('/api/services');
+            const d = await r.json();
+            allServices = d.success ? d.data : [];
+        }
+
+        function renderTickets() {
+            const search = document.getElementById('search-input').value.toLowerCase();
+            let tickets = allTickets;
+
+            if (activeStatus !== 'All') tickets = tickets.filter(t => t.status === activeStatus);
+            if (search) tickets = tickets.filter(t =>
+                t.ticket_number.toLowerCase().includes(search) ||
+                t.customer_name.toLowerCase().includes(search) ||
+                t.customer_phone.includes(search) ||
+                t.device_type.toLowerCase().includes(search)
+            );
+
+            const tbody = document.getElementById('tickets-tbody');
+            if (tickets.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:50px;color:var(--muted)">
+                    <div style="font-size:36px;margin-bottom:10px">🎫</div>
+                    No tickets found. <button onclick="openTicketModal()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:inherit">Create one →</button></td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = tickets.map(t => `
+                <tr>
+                    <td><strong style="color:var(--accent)">${t.ticket_number}</strong></td>
+                    <td>
+                        <strong>${t.customer_name}</strong><br>
+                        <small style="color:var(--muted)">${t.customer_phone}</small>
+                    </td>
+                    <td>
+                        ${t.device_type}${t.device_model ? `<br><small style="color:var(--muted)">${t.device_model}</small>` : ''}
+                    </td>
+                    <td>${t.repair_type || '<span style="color:var(--muted)">—</span>'}</td>
+                    <td><span class="badge ${statusMap[t.status] || 'badge-pending'}">${t.status}</span></td>
+                    <td>${t.total_price ? 'KES ' + Number(t.total_price).toLocaleString() : '<span style="color:var(--muted)">—</span>'}</td>
+                    <td style="color:var(--muted)">${new Date(t.created_at).toLocaleDateString()}</td>
+                    <td>
+                        <div style="display:flex;gap:6px">
+                            <button class="btn btn-ghost btn-sm" onclick="openStatusModal(${t.id}, '${t.ticket_number}', '${t.status}')">Update</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteTicket(${t.id})">Del</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function setStatusFilter(status, btn) {
+            activeStatus = status;
+            document.querySelectorAll('.filter-chips .chip').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            renderTickets();
+        }
+
+        function filterTickets() { renderTickets(); }
+
+        // Modal
+        function openTicketModal() {
+            loadServicesForDevice();
+            document.getElementById('ticket-modal').classList.add('open');
+        }
+        function closeModal() { document.getElementById('ticket-modal').classList.remove('open'); }
+
+        function loadServicesForDevice() {
+            const device = document.getElementById('t-device').value;
+            const select = document.getElementById('t-service');
+            const filtered = device ? allServices.filter(s => s.device_type === device) : allServices;
+            select.innerHTML = '<option value="">Select a service...</option>' +
+                filtered.map(s => `<option value="${s.id}" data-price="${s.price}">${s.repair_type} – KES ${Number(s.price).toLocaleString()}</option>`).join('');
+            document.getElementById('t-price').value = '';
+        }
+
+        function autoFillPrice() {
+            const opt = document.getElementById('t-service').selectedOptions[0];
+            if (opt && opt.dataset.price) document.getElementById('t-price').value = opt.dataset.price;
+        }
+
+        async function createTicket() {
+            const body = {
+                customer_name: document.getElementById('t-custname').value.trim(),
+                customer_phone: document.getElementById('t-phone').value.trim(),
+                device_type: document.getElementById('t-device').value,
+                device_model: document.getElementById('t-model').value.trim(),
+                repair_service_id: document.getElementById('t-service').value || null,
+                issue_description: document.getElementById('t-issue').value.trim(),
+                total_price: document.getElementById('t-price').value || null
+            };
+
+            if (!body.customer_name || !body.customer_phone || !body.device_type)
+                return showAlert('ticket-alert', 'Customer name, phone, and device type are required', 'error');
+
+            const r = await fetch('/api/tickets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            const d = await r.json();
+            if (d.success) {
+                showAlert('ticket-alert', `Ticket ${d.ticket_number} created!`, 'success');
+                setTimeout(() => { closeModal(); loadTickets(); }, 900);
+                // Clear form
+                ['t-custname','t-phone','t-model','t-issue','t-price'].forEach(id => document.getElementById(id).value = '');
+                document.getElementById('t-device').value = '';
+            } else {
+                showAlert('ticket-alert', d.message, 'error');
+            }
+        }
+
+        // Status modal
+        function openStatusModal(id, ticketNum, currentStatus) {
+            editingTicketId = id;
+            document.getElementById('status-ticket-num').textContent = ticketNum;
+            document.getElementById('status-select').value = currentStatus;
+            document.getElementById('status-modal').classList.add('open');
+        }
+        function closeStatusModal() { document.getElementById('status-modal').classList.remove('open'); }
+
+        async function updateStatus() {
+            const status = document.getElementById('status-select').value;
+            const r = await fetch(`/api/tickets/${editingTicketId}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status })
+            });
+            const d = await r.json();
+            if (d.success) { closeStatusModal(); loadTickets(); }
+            else alert('Error: ' + d.message);
+        }
+
+        async function deleteTicket(id) {
+            if (!confirm('Delete this ticket?')) return;
+            const r = await fetch(`/api/tickets/${id}`, { method: 'DELETE' });
+            const d = await r.json();
+            if (d.success) loadTickets();
+            else alert('Error: ' + d.message);
+        }
+
+        function showAlert(id, msg, type) {
+            const el = document.getElementById(id);
+            el.textContent = msg;
+            el.className = `alert ${type} show`;
+            setTimeout(() => el.classList.remove('show'), 4000);
+        }
+
+        async function logout() {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            window.location.href = '/';
+        }
+
+        loadTickets();
+        loadAllServices();
+    </script>
+</body>
+</html>

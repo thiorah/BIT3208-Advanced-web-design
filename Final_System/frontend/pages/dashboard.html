@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard – Calvin's Repairs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <a href="/dashboard" class="nav-brand">🔧 Calvin's <span>Repairs</span></a>
+        <div class="nav-links">
+            <a href="/dashboard" class="nav-link active">Dashboard</a>
+            <a href="/tickets" class="nav-link">Tickets</a>
+            <a href="/pricing" class="nav-link">Pricing</a>
+        </div>
+        <div class="nav-user">
+            <span class="nav-user-name" id="user-name">Loading...</span>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="page-wrapper">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1>Dashboard Overview</h1>
+            <p>Welcome back! Here's what's happening at your shop today.</p>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-grid" id="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon orange">🎫</div>
+                <div class="stat-info">
+                    <label>Total Tickets</label>
+                    <div class="stat-value" id="stat-total">—</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon yellow">⏳</div>
+                <div class="stat-info">
+                    <label>Pending</label>
+                    <div class="stat-value" id="stat-pending">—</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon blue">🔨</div>
+                <div class="stat-info">
+                    <label>In Progress</label>
+                    <div class="stat-value" id="stat-inprogress">—</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green">✅</div>
+                <div class="stat-info">
+                    <label>Completed</label>
+                    <div class="stat-value" id="stat-completed">—</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green">💰</div>
+                <div class="stat-info">
+                    <label>Revenue (KES)</label>
+                    <div class="stat-value" id="stat-revenue">—</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Tickets -->
+        <div class="section-card">
+            <div class="section-header">
+                <h2>Recent Repair Tickets</h2>
+                <a href="/tickets" class="btn btn-ghost btn-sm">View All →</a>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ticket #</th>
+                            <th>Customer</th>
+                            <th>Device</th>
+                            <th>Repair</th>
+                            <th>Status</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recent-tickets">
+                        <tr><td colspan="7" style="text-align:center; padding:40px; color:var(--muted)">Loading tickets...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="section-card">
+            <div class="section-header"><h2>Quick Actions</h2></div>
+            <div style="padding:24px; display:flex; gap:14px; flex-wrap:wrap;">
+                <a href="/tickets" class="btn btn-primary">+ New Repair Ticket</a>
+                <a href="/pricing" class="btn btn-ghost">📋 View Pricing</a>
+                <a href="/pricing" class="btn btn-ghost">⚙️ Manage Services</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auth guard
+        fetch('/api/auth/me').then(r => r.json()).then(d => {
+            if (!d.success) window.location.href = '/';
+            else document.getElementById('user-name').textContent = d.user.name;
+        });
+
+        // Load stats
+        async function loadStats() {
+            const r = await fetch('/api/stats');
+            const d = await r.json();
+            if (d.success) {
+                const s = d.stats;
+                document.getElementById('stat-total').textContent = s.total;
+                document.getElementById('stat-pending').textContent = s.pending;
+                document.getElementById('stat-inprogress').textContent = s.inprogress;
+                document.getElementById('stat-completed').textContent = s.completed;
+                document.getElementById('stat-revenue').textContent = 'KES ' + Number(s.revenue).toLocaleString();
+            }
+        }
+
+        // Load recent tickets
+        async function loadRecentTickets() {
+            const r = await fetch('/api/tickets');
+            const d = await r.json();
+            const tbody = document.getElementById('recent-tickets');
+            if (!d.success || d.data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--muted)">
+                    No tickets yet. <a href="/tickets" style="color:var(--accent)">Create your first ticket →</a></td></tr>`;
+                return;
+            }
+            const recent = d.data.slice(0, 8);
+            const statusMap = {
+                'Pending': 'badge-pending',
+                'In Progress': 'badge-progress',
+                'Completed': 'badge-completed',
+                'Delivered': 'badge-delivered'
+            };
+            tbody.innerHTML = recent.map(t => `
+                <tr>
+                    <td><strong style="color:var(--accent)">${t.ticket_number}</strong></td>
+                    <td>${t.customer_name}<br><small style="color:var(--muted)">${t.customer_phone}</small></td>
+                    <td>${t.device_type}${t.device_model ? '<br><small style="color:var(--muted)">'+t.device_model+'</small>' : ''}</td>
+                    <td>${t.repair_type || '—'}</td>
+                    <td><span class="badge ${statusMap[t.status] || 'badge-pending'}">${t.status}</span></td>
+                    <td>${t.total_price ? 'KES '+Number(t.total_price).toLocaleString() : '—'}</td>
+                    <td style="color:var(--muted)">${new Date(t.created_at).toLocaleDateString()}</td>
+                </tr>
+            `).join('');
+        }
+
+        async function logout() {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            window.location.href = '/';
+        }
+
+        loadStats();
+        loadRecentTickets();
+    </script>
+</body>
+</html>
