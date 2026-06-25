@@ -8,8 +8,8 @@ Features:
 - Simple dashboard
 - Basic repair records
 
-## Mobile Repair System V2
-Location: Mobile_Repair_System_V2
+## Final System
+Location: Final System
 
 Features:
 - HTML, CSS and JavaScript frontend
