@@ -3,15 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Repair Tickets – Calvin's Repairs</title>
+    <title>Repair Tickets – FixIt Pro</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../css/style.css">
+    <style>
+        .balance-due { color: var(--error); }
+        .balance-zero { color: var(--success); }
+    </style>
 </head>
 <body>
     <!-- NAVBAR -->
     <nav class="navbar">
-        <a href="/dashboard" class="nav-brand">🔧 Calvin's <span>Repairs</span></a>
+        <a href="/dashboard" class="nav-brand">🔧 Fix<span>It</span> Pro</a>
         <div class="nav-links">
             <a href="/dashboard" class="nav-link">Dashboard</a>
             <a href="/tickets" class="nav-link active">Tickets</a>
@@ -52,11 +56,11 @@
                         <tr>
                             <th>Ticket #</th>
                             <th>Customer</th>
+                            <th>Linked Client</th>
                             <th>Device</th>
-                            <th>Repair Service</th>
                             <th>Status</th>
-                            <th>Amount (KES)</th>
-                            <th>Date</th>
+                            <th>Price</th>
+                            <th>Balance</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -87,6 +91,14 @@
                         <input type="text" id="t-phone" placeholder="07XXXXXXXX">
                     </div>
                 </div>
+
+                <div class="form-group">
+                    <label>Link to Client Account (optional)</label>
+                    <select id="t-client">
+                        <option value="">— No account, walk-in customer —</option>
+                    </select>
+                </div>
+
                 <div class="form-row">
                     <div class="form-group">
                         <label>Device Type</label>
@@ -149,16 +161,48 @@
         </div>
     </div>
 
+    <!-- Record Payment Modal -->
+    <div class="modal-overlay" id="payment-modal">
+        <div class="modal" style="max-width:380px">
+            <div class="modal-header">
+                <h3>Record Payment</h3>
+                <button class="modal-close" onclick="closePaymentModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert" id="payment-alert"></div>
+                <p style="color:var(--muted);margin-bottom:6px;font-size:14px">Ticket: <strong id="payment-ticket-num" style="color:var(--accent)"></strong></p>
+                <p style="color:var(--muted);margin-bottom:16px;font-size:13px">Current balance due: <strong id="payment-balance" style="color:var(--error)"></strong></p>
+                <div class="form-group">
+                    <label>Amount Received (KES)</label>
+                    <input type="number" id="payment-amount" placeholder="e.g. 1000">
+                </div>
+                <div class="form-group">
+                    <label>Payment Method</label>
+                    <select id="payment-method">
+                        <option value="Cash">Cash</option>
+                        <option value="M-Pesa">M-Pesa</option>
+                        <option value="Card">Card</option>
+                        <option value="Bank Transfer">Bank Transfer</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" style="width:100%" onclick="recordPayment()">Save Payment</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let allTickets = [];
         let allServices = [];
+        let allClients = [];
         let activeStatus = 'All';
         let editingTicketId = null;
+        let payingTicketId = null;
 
-        // Auth guard
+        // Auth guard — redirect clients away from staff pages
         fetch('/api/auth/me').then(r => r.json()).then(d => {
-            if (!d.success) window.location.href = '/';
-            else document.getElementById('user-name').textContent = d.user.name;
+            if (!d.success) { window.location.href = '/'; return; }
+            if (d.user.role === 'client') { window.location.href = '/client-portal'; return; }
+            document.getElementById('user-name').textContent = d.user.name;
         });
 
         const statusMap = {
@@ -181,6 +225,15 @@
             allServices = d.success ? d.data : [];
         }
 
+        async function loadAllClients() {
+            const r = await fetch('/api/clients');
+            const d = await r.json();
+            allClients = d.success ? d.data : [];
+            const select = document.getElementById('t-client');
+            select.innerHTML = '<option value="">— No account, walk-in customer —</option>' +
+                allClients.map(c => `<option value="${c.id}">${c.full_name} (${c.email})</option>`).join('');
+        }
+
         function renderTickets() {
             const search = document.getElementById('search-input').value.toLowerCase();
             let tickets = allTickets;
@@ -201,28 +254,31 @@
                 return;
             }
 
-            tbody.innerHTML = tickets.map(t => `
+            tbody.innerHTML = tickets.map(t => {
+                const price = t.total_price ? Number(t.total_price) : 0;
+                const paid = Number(t.amount_paid || 0);
+                const balance = Math.max(price - paid, 0);
+                return `
                 <tr>
                     <td><strong style="color:var(--accent)">${t.ticket_number}</strong></td>
                     <td>
                         <strong>${t.customer_name}</strong><br>
                         <small style="color:var(--muted)">${t.customer_phone}</small>
                     </td>
-                    <td>
-                        ${t.device_type}${t.device_model ? `<br><small style="color:var(--muted)">${t.device_model}</small>` : ''}
-                    </td>
-                    <td>${t.repair_type || '<span style="color:var(--muted)">—</span>'}</td>
+                    <td>${t.client_name ? `👤 ${t.client_name}` : '<span style="color:var(--muted)">— walk-in —</span>'}</td>
+                    <td>${t.device_type}${t.device_model ? `<br><small style="color:var(--muted)">${t.device_model}</small>` : ''}</td>
                     <td><span class="badge ${statusMap[t.status] || 'badge-pending'}">${t.status}</span></td>
-                    <td>${t.total_price ? 'KES ' + Number(t.total_price).toLocaleString() : '<span style="color:var(--muted)">—</span>'}</td>
-                    <td style="color:var(--muted)">${new Date(t.created_at).toLocaleDateString()}</td>
+                    <td>${price ? 'KES ' + price.toLocaleString() : '<span style="color:var(--muted)">—</span>'}</td>
+                    <td class="${balance > 0 ? 'balance-due' : 'balance-zero'}">${price ? 'KES ' + balance.toLocaleString() : '—'}</td>
                     <td>
-                        <div style="display:flex;gap:6px">
-                            <button class="btn btn-ghost btn-sm" onclick="openStatusModal(${t.id}, '${t.ticket_number}', '${t.status}')">Update</button>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap">
+                            <button class="btn btn-ghost btn-sm" onclick="openStatusModal(${t.id}, '${t.ticket_number}', '${t.status}')">Status</button>
+                            <button class="btn btn-primary btn-sm" onclick="openPaymentModal(${t.id}, '${t.ticket_number}', ${balance})">Pay</button>
                             <button class="btn btn-danger btn-sm" onclick="deleteTicket(${t.id})">Del</button>
                         </div>
                     </td>
                 </tr>
-            `).join('');
+            `}).join('');
         }
 
         function setStatusFilter(status, btn) {
@@ -234,7 +290,7 @@
 
         function filterTickets() { renderTickets(); }
 
-        // Modal
+        // New ticket modal
         function openTicketModal() {
             loadServicesForDevice();
             document.getElementById('ticket-modal').classList.add('open');
@@ -259,6 +315,7 @@
             const body = {
                 customer_name: document.getElementById('t-custname').value.trim(),
                 customer_phone: document.getElementById('t-phone').value.trim(),
+                client_id: document.getElementById('t-client').value || null,
                 device_type: document.getElementById('t-device').value,
                 device_model: document.getElementById('t-model').value.trim(),
                 repair_service_id: document.getElementById('t-service').value || null,
@@ -278,9 +335,9 @@
             if (d.success) {
                 showAlert('ticket-alert', `Ticket ${d.ticket_number} created!`, 'success');
                 setTimeout(() => { closeModal(); loadTickets(); }, 900);
-                // Clear form
                 ['t-custname','t-phone','t-model','t-issue','t-price'].forEach(id => document.getElementById(id).value = '');
                 document.getElementById('t-device').value = '';
+                document.getElementById('t-client').value = '';
             } else {
                 showAlert('ticket-alert', d.message, 'error');
             }
@@ -307,6 +364,35 @@
             else alert('Error: ' + d.message);
         }
 
+        // Payment modal
+        function openPaymentModal(id, ticketNum, balance) {
+            payingTicketId = id;
+            document.getElementById('payment-ticket-num').textContent = ticketNum;
+            document.getElementById('payment-balance').textContent = 'KES ' + Number(balance).toLocaleString();
+            document.getElementById('payment-amount').value = '';
+            document.getElementById('payment-modal').classList.add('open');
+        }
+        function closePaymentModal() { document.getElementById('payment-modal').classList.remove('open'); }
+
+        async function recordPayment() {
+            const amount = document.getElementById('payment-amount').value;
+            const payment_method = document.getElementById('payment-method').value;
+            if (!amount || amount <= 0) return showAlert('payment-alert', 'Enter a valid amount', 'error');
+
+            const r = await fetch(`/api/tickets/${payingTicketId}/payment`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount, payment_method })
+            });
+            const d = await r.json();
+            if (d.success) {
+                showAlert('payment-alert', 'Payment recorded!', 'success');
+                setTimeout(() => { closePaymentModal(); loadTickets(); }, 800);
+            } else {
+                showAlert('payment-alert', d.message, 'error');
+            }
+        }
+
         async function deleteTicket(id) {
             if (!confirm('Delete this ticket?')) return;
             const r = await fetch(`/api/tickets/${id}`, { method: 'DELETE' });
@@ -329,6 +415,7 @@
 
         loadTickets();
         loadAllServices();
+        loadAllClients();
     </script>
 </body>
 </html>

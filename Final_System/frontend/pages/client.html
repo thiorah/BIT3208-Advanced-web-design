@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Repairs – FixIt Pro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        .ticket-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 18px;
+        }
+        .ticket-card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+        .ticket-number { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; color: var(--accent); }
+        .ticket-device { color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+        /* Progress tracker */
+        .progress-track {
+            display: flex;
+            align-items: center;
+            margin: 22px 0;
+        }
+        .progress-step {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+        .progress-dot {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            background: var(--surface);
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            z-index: 2;
+            transition: all 0.3s;
+        }
+        .progress-step.done .progress-dot { background: var(--success); border-color: var(--success); }
+        .progress-step.active .progress-dot { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 4px rgba(255,107,53,0.2); }
+        .progress-label { font-size: 11px; color: var(--muted); margin-top: 8px; text-align: center; }
+        .progress-step.done .progress-label, .progress-step.active .progress-label { color: var(--text); font-weight: 600; }
+        .progress-line {
+            position: absolute;
+            top: 13px; left: 0; right: 0;
+            height: 2px;
+            background: var(--border);
+            z-index: 1;
+        }
+        .progress-step:first-child .progress-line { left: 50%; }
+        .progress-step:last-child .progress-line { right: 50%; }
+        .progress-step.done .progress-line { background: var(--success); }
+
+        /* Payment box */
+        .payment-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 14px;
+        }
+        .pay-stat { text-align: center; flex: 1; min-width: 90px; }
+        .pay-stat label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; }
+        .pay-stat .val { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; }
+        .pay-divider { width: 1px; height: 32px; background: var(--border); }
+
+        .balance-zero { color: var(--success); }
+        .balance-due { color: var(--error); }
+
+        .issue-note {
+            background: var(--surface);
+            border-radius: 10px;
+            padding: 12px 14px;
+            font-size: 13px;
+            color: #c0c0d0;
+            margin-bottom: 16px;
+            border-left: 3px solid var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <a href="/client-portal" class="nav-brand">🔧 Fix<span>It</span> Pro</a>
+        <div class="nav-links">
+            <a href="/client-portal" class="nav-link active">My Repairs</a>
+            <a href="/pricing" class="nav-link">Pricing</a>
+        </div>
+        <div class="nav-user">
+            <span class="nav-user-name" id="user-name">Loading...</span>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="page-wrapper">
+        <div class="page-header">
+            <h1>My Repairs</h1>
+            <p>Track the progress and payment status of your devices</p>
+        </div>
+
+        <!-- Client quick stats -->
+        <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+            <div class="stat-card">
+                <div class="stat-icon orange">🎫</div>
+                <div class="stat-info">
+                    <label>Total Repairs</label>
+                    <div class="stat-value" id="stat-total">—</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon blue">🔨</div>
+                <div class="stat-info">
+                    <label>Active Right Now</label>
+                    <div class="stat-value" id="stat-active">—</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon yellow">💰</div>
+                <div class="stat-info">
+                    <label>Total Balance Due</label>
+                    <div class="stat-value" id="stat-owed">—</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tickets list -->
+        <div id="tickets-list">
+            <div style="text-align:center;padding:60px;color:var(--muted)">Loading your repairs...</div>
+        </div>
+    </div>
+
+    <script>
+        const statusSteps = ['Pending', 'In Progress', 'Completed', 'Delivered'];
+        const statusIcons = { 'Pending': '⏳', 'In Progress': '🔨', 'Completed': '✅', 'Delivered': '📦' };
+
+        // Auth guard — also blocks staff from landing here by mistake
+        fetch('/api/auth/me').then(r => r.json()).then(d => {
+            if (!d.success) { window.location.href = '/'; return; }
+            if (d.user.role !== 'client') { window.location.href = '/dashboard'; return; }
+            document.getElementById('user-name').textContent = d.user.name;
+        });
+
+        async function loadStats() {
+            const r = await fetch('/api/client/stats');
+            const d = await r.json();
+            if (!d.success) return;
+            document.getElementById('stat-total').textContent = d.stats.total;
+            document.getElementById('stat-active').textContent = d.stats.active;
+            const owedEl = document.getElementById('stat-owed');
+            owedEl.textContent = 'KES ' + Number(d.stats.owed).toLocaleString();
+            owedEl.className = 'stat-value ' + (d.stats.owed > 0 ? 'balance-due' : 'balance-zero');
+        }
+
+        function renderProgress(currentStatus) {
+            const currentIndex = statusSteps.indexOf(currentStatus);
+            return `
+                <div class="progress-track">
+                    ${statusSteps.map((step, i) => {
+                        let cls = '';
+                        if (i < currentIndex) cls = 'done';
+                        else if (i === currentIndex) cls = 'active';
+                        return `
+                            <div class="progress-step ${cls}">
+                                <div class="progress-line"></div>
+                                <div class="progress-dot">${i <= currentIndex ? (i < currentIndex ? '✓' : statusIcons[step]) : ''}</div>
+                                <div class="progress-label">${step}</div>
+                            </div>`;
+                    }).join('')}
+                </div>`;
+        }
+
+        async function loadTickets() {
+            const r = await fetch('/api/tickets'); // backend auto-filters to only this client's tickets
+            const d = await r.json();
+            const container = document.getElementById('tickets-list');
+
+            if (!d.success || d.data.length === 0) {
+                container.innerHTML = `
+                    <div class="section-card">
+                        <div class="empty-state">
+                            <div class="empty-icon">🔧</div>
+                            <p>You don't have any repairs on file yet.<br>Visit the shop to drop off a device and we'll link it to your account.</p>
+                        </div>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = d.data.map(t => {
+                const price = t.total_price ? Number(t.total_price) : 0;
+                const paid = Number(t.amount_paid || 0);
+                const balance = Math.max(price - paid, 0);
+
+                return `
+                <div class="ticket-card">
+                    <div class="ticket-card-top">
+                        <div>
+                            <div class="ticket-number">${t.ticket_number}</div>
+                            <div class="ticket-device">${t.device_type}${t.device_model ? ' · ' + t.device_model : ''} — ${t.repair_type || 'General repair'}</div>
+                        </div>
+                        <span class="badge ${badgeClass(t.status)}">${t.status}</span>
+                    </div>
+
+                    ${t.issue_description ? `<div class="issue-note">📝 ${escapeHtml(t.issue_description)}</div>` : ''}
+
+                    ${renderProgress(t.status)}
+
+                    <div class="payment-box">
+                        <div class="pay-stat">
+                            <label>Total Cost</label>
+                            <div class="val">KES ${price.toLocaleString()}</div>
+                        </div>
+                        <div class="pay-divider"></div>
+                        <div class="pay-stat">
+                            <label>Amount Paid</label>
+                            <div class="val balance-zero">KES ${paid.toLocaleString()}</div>
+                        </div>
+                        <div class="pay-divider"></div>
+                        <div class="pay-stat">
+                            <label>Balance Due</label>
+                            <div class="val ${balance > 0 ? 'balance-due' : 'balance-zero'}">KES ${balance.toLocaleString()}</div>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function badgeClass(status) {
+            const map = { 'Pending': 'badge-pending', 'In Progress': 'badge-progress', 'Completed': 'badge-completed', 'Delivered': 'badge-delivered' };
+            return map[status] || 'badge-pending';
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        async function logout() {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            window.location.href = '/';
+        }
+
+        loadStats();
+        loadTickets();
+    </script>
+</body>
+</html>

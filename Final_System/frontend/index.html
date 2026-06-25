@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calvin's Repairs</title>
+    <title>FixIt Pro – Repair Shop</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
@@ -26,17 +26,22 @@
             background: var(--bg);
             color: var(--text);
             min-height: 100vh;
-            display: flex;
+            width: 100%;
             overflow: hidden;
         }
-        /* Left Panel */
+        .page-shell {
+            display: flex;
+            width: 100%;
+            min-height: 100vh;
+        }
         .left-panel {
-            flex: 1;
+            flex: 1.15;
+            min-height: 100vh;
             background: linear-gradient(145deg, #0f0f1a 0%, #1a0a2e 50%, #0a1a1f 100%);
             display: flex;
             flex-direction: column;
             justify-content: center;
-            padding: 60px;
+            padding: clamp(28px, 4vw, 60px);
             position: relative;
             overflow: hidden;
         }
@@ -87,10 +92,7 @@
             position: relative;
             z-index: 1;
         }
-        .hero-title .highlight {
-            color: var(--accent);
-            display: block;
-        }
+        .hero-title .highlight { color: var(--accent); display: block; }
         .hero-sub {
             color: var(--muted);
             font-size: 16px;
@@ -100,35 +102,19 @@
             position: relative;
             z-index: 1;
         }
-        .feature-list {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            position: relative;
-            z-index: 1;
-        }
-        .feature-item {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            color: #c0c0d0;
-            font-size: 14px;
-        }
-        .feature-dot {
-            width: 8px; height: 8px;
-            background: var(--accent);
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
-        /* Right Panel */
+        .feature-list { display: flex; flex-direction: column; gap: 16px; position: relative; z-index: 1; }
+        .feature-item { display: flex; align-items: center; gap: 14px; color: #c0c0d0; font-size: 14px; }
+        .feature-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; flex-shrink: 0; }
         .right-panel {
-            width: 480px;
+            flex: 0 0 min(480px, 42vw);
+            min-height: 100vh;
             background: var(--surface);
             display: flex;
             flex-direction: column;
             justify-content: center;
-            padding: 60px 50px;
+            padding: clamp(28px, 4vw, 60px) clamp(24px, 3vw, 48px);
             border-left: 1px solid var(--border);
+            overflow-y: auto;
         }
         .tab-switcher {
             display: flex;
@@ -151,23 +137,11 @@
             cursor: pointer;
             transition: all 0.25s;
         }
-        .tab-btn.active {
-            background: var(--accent);
-            color: #fff;
-        }
+        .tab-btn.active { background: var(--accent); color: #fff; }
         .form-section { display: none; }
         .form-section.active { display: block; }
-        .form-title {
-            font-family: 'Syne', sans-serif;
-            font-size: 26px;
-            font-weight: 700;
-            margin-bottom: 6px;
-        }
-        .form-subtitle {
-            color: var(--muted);
-            font-size: 14px;
-            margin-bottom: 30px;
-        }
+        .form-title { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+        .form-subtitle { color: var(--muted); font-size: 14px; margin-bottom: 30px; }
         .form-group { margin-bottom: 18px; }
         .form-group label {
             display: block;
@@ -177,8 +151,7 @@
             margin-bottom: 7px;
             letter-spacing: 0.3px;
         }
-        .form-group input,
-        .form-group select {
+        .form-group input, .form-group select {
             width: 100%;
             padding: 13px 16px;
             background: var(--card);
@@ -191,8 +164,25 @@
             transition: border-color 0.2s;
         }
         .form-group select option { background: var(--card); }
-        .form-group input:focus,
-        .form-group select:focus { border-color: var(--accent); }
+        .form-group input:focus, .form-group select:focus { border-color: var(--accent); }
+
+        /* Role selector cards (register form) */
+        .role-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+        .role-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .role-card:hover { border-color: #4a4a6f; }
+        .role-card.selected { border-color: var(--accent); background: rgba(255,107,53,0.1); }
+        .role-card .role-icon { font-size: 20px; display: block; margin-bottom: 4px; }
+        .role-card .role-label { font-size: 12px; font-weight: 600; }
+        .role-card .role-desc { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
         .submit-btn {
             width: 100%;
             padding: 14px;
@@ -209,40 +199,37 @@
         }
         .submit-btn:hover { opacity: 0.9; transform: translateY(-1px); }
         .submit-btn:active { transform: translateY(0); }
-        .alert {
-            padding: 12px 16px;
-            border-radius: 8px;
-            font-size: 14px;
-            margin-bottom: 16px;
-            display: none;
-        }
+        .alert { padding: 12px 16px; border-radius: 8px; font-size: 14px; margin-bottom: 16px; display: none; }
         .alert.success { background: rgba(0,212,170,0.15); color: var(--success); border: 1px solid rgba(0,212,170,0.3); }
         .alert.error { background: rgba(255,68,102,0.15); color: var(--error); border: 1px solid rgba(255,68,102,0.3); }
         .alert.show { display: block; }
         .divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
-        @media (max-width: 800px) {
+        @media (max-width: 900px) {
+            body { overflow: auto; }
+            .page-shell { flex-direction: column; }
             .left-panel { display: none; }
-            .right-panel { width: 100%; padding: 40px 28px; }
+            .right-panel { flex: 1; min-height: auto; width: 100%; padding: 40px 28px; }
         }
     </style>
 </head>
 <body>
+    <div class="page-shell">
     <!-- Left Branding Panel -->
     <div class="left-panel">
         <div class="brand">
             <div class="brand-icon">🔧</div>
-            <div class="brand-name">Calvin's <span>Repairs</span></div>
+            <div class="brand-name">Fix<span>It</span> Pro</div>
         </div>
         <h1 class="hero-title">
             Manage Every <span class="highlight">Repair.</span>
             One System.
         </h1>
-            <p class="hero-sub">Track tickets, manage inventory, view pricing — everything your repair business needs, all in one place.</p>
+        <p class="hero-sub">Staff track tickets and pricing. Customers track their own repair status and balance — all in one place.</p>
         <div class="feature-list">
-            <div class="feature-item"><span class="feature-dot"></span> Create & track repair tickets instantly</div>
-            <div class="feature-item"><span class="feature-dot"></span> View all services & pricing in one place</div>
-            <div class="feature-item"><span class="feature-dot"></span> Dashboard stats & revenue overview</div>
-            <div class="feature-item"><span class="feature-dot"></span> Manage customers and technicians</div>
+            <div class="feature-item"><span class="feature-dot"></span> Staff dashboard with tickets & revenue</div>
+            <div class="feature-item"><span class="feature-dot"></span> Client portal to track repair progress</div>
+            <div class="feature-item"><span class="feature-dot"></span> Built-in payment & balance tracking</div>
+            <div class="feature-item"><span class="feature-dot"></span> Role-based access for every account type</div>
         </div>
     </div>
 
@@ -256,11 +243,11 @@
         <!-- Login Form -->
         <div class="form-section active" id="login-section">
             <h2 class="form-title">Welcome back</h2>
-            <p class="form-subtitle">Sign in to your Calvin's Repairs account</p>
+            <p class="form-subtitle">Sign in to your account</p>
             <div class="alert" id="login-alert"></div>
             <div class="form-group">
                 <label>Email Address</label>
-                <input type="email" id="login-email" placeholder="admin@calvinsrepairs.com">
+                <input type="email" id="login-email" placeholder="you@example.com">
             </div>
             <div class="form-group">
                 <label>Password</label>
@@ -269,15 +256,37 @@
             <button class="submit-btn" onclick="handleLogin()">Sign In →</button>
             <hr class="divider">
             <p style="color: var(--muted); font-size: 13px; text-align:center;">
-                Default admin: <strong style="color:var(--accent)">admin@calvinsrepairs.com</strong> / <strong style="color:var(--accent)">admin123</strong>
+                Default admin: <strong style="color:var(--accent)">admin@repairshop.com</strong> / <strong style="color:var(--accent)">admin123</strong>
             </p>
         </div>
 
         <!-- Register Form -->
         <div class="form-section" id="register-section">
             <h2 class="form-title">Create Account</h2>
-            <p class="form-subtitle">Register a new technician or admin account</p>
+            <p class="form-subtitle">Choose your account type</p>
             <div class="alert" id="register-alert"></div>
+
+            <div class="form-group">
+                <label>I am a...</label>
+                <div class="role-grid">
+                    <div class="role-card selected" data-role="client" onclick="selectRole('client', this)">
+                        <span class="role-icon">👤</span>
+                        <div class="role-label">Client</div>
+                        <div class="role-desc">Track my repair</div>
+                    </div>
+                    <div class="role-card" data-role="technician" onclick="selectRole('technician', this)">
+                        <span class="role-icon">🔧</span>
+                        <div class="role-label">Technician</div>
+                        <div class="role-desc">Repair staff</div>
+                    </div>
+                    <div class="role-card" data-role="admin" onclick="selectRole('admin', this)">
+                        <span class="role-icon">⚙️</span>
+                        <div class="role-label">Admin</div>
+                        <div class="role-desc">Shop owner</div>
+                    </div>
+                </div>
+            </div>
+
             <div class="form-group">
                 <label>Full Name</label>
                 <input type="text" id="reg-name" placeholder="e.g. John Mwangi">
@@ -287,30 +296,37 @@
                 <input type="email" id="reg-email" placeholder="john@example.com">
             </div>
             <div class="form-group">
-                <label>Password</label>
-                <input type="password" id="reg-password" placeholder="Minimum 6 characters">
+                <label>Phone Number</label>
+                <input type="text" id="reg-phone" placeholder="07XXXXXXXX">
             </div>
             <div class="form-group">
-                <label>Role</label>
-                <select id="reg-role">
-                    <option value="technician">Technician</option>
-                    <option value="admin">Admin</option>
-                </select>
+                <label>Password</label>
+                <input type="password" id="reg-password" placeholder="Minimum 6 characters">
             </div>
             <button class="submit-btn" onclick="handleRegister()">Create Account →</button>
         </div>
     </div>
 
     <script>
-        // Redirect if already logged in
+        let selectedRole = 'client';
+
+        // Redirect if already logged in — destination depends on role
         fetch('/api/auth/me').then(r => r.json()).then(d => {
-            if (d.success) window.location.href = '/dashboard';
+            if (d.success) {
+                window.location.href = d.user.role === 'client' ? '/client-portal' : '/dashboard';
+            }
         });
 
         function switchTab(tab) {
             document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', (i === 0 && tab === 'login') || (i === 1 && tab === 'register')));
             document.getElementById('login-section').classList.toggle('active', tab === 'login');
             document.getElementById('register-section').classList.toggle('active', tab === 'register');
+        }
+
+        function selectRole(role, el) {
+            selectedRole = role;
+            document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
         }
 
         function showAlert(id, msg, type) {
@@ -333,7 +349,8 @@
             const data = await res.json();
             if (data.success) {
                 showAlert('login-alert', 'Login successful! Redirecting...', 'success');
-                setTimeout(() => window.location.href = '/dashboard', 800);
+                const destination = data.user.role === 'client' ? '/client-portal' : '/dashboard';
+                setTimeout(() => window.location.href = destination, 800);
             } else {
                 showAlert('login-alert', data.message, 'error');
             }
@@ -342,15 +359,15 @@
         async function handleRegister() {
             const full_name = document.getElementById('reg-name').value.trim();
             const email = document.getElementById('reg-email').value.trim();
+            const phone = document.getElementById('reg-phone').value.trim();
             const password = document.getElementById('reg-password').value;
-            const role = document.getElementById('reg-role').value;
-            if (!full_name || !email || !password) return showAlert('register-alert', 'All fields are required', 'error');
+            if (!full_name || !email || !password) return showAlert('register-alert', 'Name, email, and password are required', 'error');
             if (password.length < 6) return showAlert('register-alert', 'Password must be at least 6 characters', 'error');
 
             const res = await fetch('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ full_name, email, password, role })
+                body: JSON.stringify({ full_name, email, password, role: selectedRole, phone })
             });
             const data = await res.json();
             if (data.success) {
@@ -361,7 +378,6 @@
             }
         }
 
-        // Enter key support
         document.addEventListener('keydown', e => {
             if (e.key === 'Enter') {
                 if (document.getElementById('login-section').classList.contains('active')) handleLogin();

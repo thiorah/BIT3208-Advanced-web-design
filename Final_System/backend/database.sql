@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
     full_name VARCHAR(100) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
-    role ENUM('admin', 'technician') DEFAULT 'technician',
+    role ENUM('admin', 'technician', 'client') DEFAULT 'technician',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS repair_tickets (
     ticket_number VARCHAR(20) UNIQUE NOT NULL,
     customer_name VARCHAR(100) NOT NULL,
     customer_phone VARCHAR(20) NOT NULL,
+    customer_email VARCHAR(100),
     device_type VARCHAR(100) NOT NULL,
     device_model VARCHAR(100),
     repair_service_id INT,

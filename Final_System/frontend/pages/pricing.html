@@ -151,10 +151,15 @@
         let allServices = [];
         let activeFilter = 'All';
 
-        // Auth guard
+        // Auth guard and role-based UI
+        let isAdmin = false;
         fetch('/api/auth/me').then(r => r.json()).then(d => {
-            if (!d.success) window.location.href = '/';
-            else document.getElementById('user-name').textContent = d.user.name;
+            if (!d.success) return window.location.href = '/';
+            document.getElementById('user-name').textContent = d.user.name;
+            isAdmin = d.user && d.user.role === 'admin';
+            // hide add service button for non-admins
+            if (!isAdmin) document.querySelector('.btn.btn-primary')?.remove();
+            loadServices();
         });
 
         const deviceIcons = {
@@ -204,19 +209,19 @@
                         <span class="device-icon">${deviceIcons[device] || '🔧'}</span> ${device} Repairs
                     </div>
                     <div class="pricing-grid">
-                        ${services.map(s => `
-                            <div class="price-card" id="svc-${s.id}">
-                                <div class="price-card-header">
-                                    <span class="repair-type-name">${s.repair_type}</span>
-                                    <div class="price-tag">KES ${Number(s.price).toLocaleString()}<span>/repair</span></div>
-                                </div>
-                                <p class="price-desc">${s.description || 'Professional repair service'}</p>
-                                <div class="price-meta">
-                                    <span class="meta-tag">⏱ ${s.duration_hours}h est.</span>
-                                    <button class="btn btn-danger btn-sm" onclick="deleteService(${s.id})" style="margin-left:auto">Delete</button>
-                                </div>
-                            </div>
-                        `).join('')}
+                                        ${services.map(s => `
+                                        <div class="price-card" id="svc-${s.id}">
+                                            <div class="price-card-header">
+                                                <span class="repair-type-name">${s.repair_type}</span>
+                                                <div class="price-tag">KES ${Number(s.price).toLocaleString()}<span>/repair</span></div>
+                                            </div>
+                                            <p class="price-desc">${s.description || 'Professional repair service'}</p>
+                                            <div class="price-meta">
+                                                <span class="meta-tag">⏱ ${s.duration_hours}h est.</span>
+                                                ${isAdmin ? `<button class="btn btn-danger btn-sm" onclick="deleteService(${s.id})" style="margin-left:auto">Delete</button>` : ''}
+                                            </div>
+                                        </div>
+                                    `).join('')}
                     </div>`;
             }
             document.getElementById('services-content').innerHTML = html;
