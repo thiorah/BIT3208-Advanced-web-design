@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Repair Tickets – FixIt Pro</title>
+    <title>Repair Tickets – Calvin's Repairs</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../css/style.css">
@@ -15,7 +15,7 @@
 <body>
     <!-- NAVBAR -->
     <nav class="navbar">
-        <a href="/dashboard" class="nav-brand">🔧 Fix<span>It</span> Pro</a>
+        <a href="/dashboard" class="nav-brand">🔧 Calvin's <span>Repairs</span></a>
         <div class="nav-links">
             <a href="/dashboard" class="nav-link">Dashboard</a>
             <a href="/tickets" class="nav-link active">Tickets</a>
@@ -161,6 +161,81 @@
         </div>
     </div>
 
+    <!-- Edit Ticket Modal -->
+    <div class="modal-overlay" id="edit-modal">
+        <div class="modal" style="max-width:560px">
+            <div class="modal-header">
+                <h3>Edit Ticket</h3>
+                <button class="modal-close" onclick="closeEditModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert" id="edit-alert"></div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Customer Name</label>
+                        <input type="text" id="edit-custname" placeholder="Full name">
+                    </div>
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="text" id="edit-phone" placeholder="07XXXXXXXX">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Link to Client Account (optional)</label>
+                    <select id="edit-client">
+                        <option value="">— No account, walk-in customer —</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Device Type</label>
+                        <select id="edit-device" onchange="loadEditServicesForDevice()">
+                            <option value="">Select device...</option>
+                            <option value="Smartphone">Smartphone</option>
+                            <option value="Tablet">Tablet</option>
+                            <option value="Laptop">Laptop</option>
+                            <option value="Accessory">Accessory</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Device Model</label>
+                        <input type="text" id="edit-model" placeholder="e.g. Samsung A53">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Repair Service</label>
+                    <select id="edit-service" onchange="autoFillEditPrice()">
+                        <option value="">Select a service...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Issue Description</label>
+                    <textarea id="edit-issue" placeholder="Describe the problem in detail..."></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Total Price (KES)</label>
+                        <input type="number" id="edit-price" placeholder="Auto-filled from service">
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="edit-status">
+                            <option value="Pending">Pending</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Delivered">Delivered</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display:flex;gap:10px;margin-top:6px">
+                    <button class="btn btn-primary" style="flex:1" onclick="updateTicket()">Save Changes</button>
+                    <button class="btn btn-ghost" onclick="closeEditModal()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Record Payment Modal -->
     <div class="modal-overlay" id="payment-modal">
         <div class="modal" style="max-width:380px">
@@ -229,7 +304,13 @@
             const r = await fetch('/api/clients');
             const d = await r.json();
             allClients = d.success ? d.data : [];
-            const select = document.getElementById('t-client');
+            populateClientSelect('t-client');
+            populateClientSelect('edit-client');
+        }
+
+        function populateClientSelect(selectId) {
+            const select = document.getElementById(selectId);
+            if (!select) return;
             select.innerHTML = '<option value="">— No account, walk-in customer —</option>' +
                 allClients.map(c => `<option value="${c.id}">${c.full_name} (${c.email})</option>`).join('');
         }
@@ -272,6 +353,7 @@
                     <td class="${balance > 0 ? 'balance-due' : 'balance-zero'}">${price ? 'KES ' + balance.toLocaleString() : '—'}</td>
                     <td>
                         <div style="display:flex;gap:6px;flex-wrap:wrap">
+                            <button class="btn btn-ghost btn-sm" onclick="openEditModal(${t.id})">Edit</button>
                             <button class="btn btn-ghost btn-sm" onclick="openStatusModal(${t.id}, '${t.ticket_number}', '${t.status}')">Status</button>
                             <button class="btn btn-primary btn-sm" onclick="openPaymentModal(${t.id}, '${t.ticket_number}', ${balance})">Pay</button>
                             <button class="btn btn-danger btn-sm" onclick="deleteTicket(${t.id})">Del</button>
@@ -309,6 +391,68 @@
         function autoFillPrice() {
             const opt = document.getElementById('t-service').selectedOptions[0];
             if (opt && opt.dataset.price) document.getElementById('t-price').value = opt.dataset.price;
+        }
+
+        function loadEditServicesForDevice(device = null, selectedId = '') {
+            const deviceValue = device || document.getElementById('edit-device').value;
+            const select = document.getElementById('edit-service');
+            const filtered = deviceValue ? allServices.filter(s => s.device_type === deviceValue) : allServices;
+            select.innerHTML = '<option value="">Select a service...</option>' +
+                filtered.map(s => `<option value="${s.id}" data-price="${s.price}">${s.repair_type} – KES ${Number(s.price).toLocaleString()}</option>`).join('');
+            if (selectedId) select.value = selectedId;
+            document.getElementById('edit-price').value = '';
+        }
+
+        function autoFillEditPrice() {
+            const opt = document.getElementById('edit-service').selectedOptions[0];
+            if (opt && opt.dataset.price) document.getElementById('edit-price').value = opt.dataset.price;
+        }
+
+        function openEditModal(id) {
+            const ticket = allTickets.find(t => t.id === id);
+            if (!ticket) return;
+            editingTicketId = id;
+            document.getElementById('edit-custname').value = ticket.customer_name || '';
+            document.getElementById('edit-phone').value = ticket.customer_phone || '';
+            document.getElementById('edit-client').value = ticket.client_id || '';
+            document.getElementById('edit-device').value = ticket.device_type || '';
+            document.getElementById('edit-model').value = ticket.device_model || '';
+            document.getElementById('edit-issue').value = ticket.issue_description || '';
+            document.getElementById('edit-price').value = ticket.total_price || '';
+            document.getElementById('edit-status').value = ticket.status || 'Pending';
+            loadEditServicesForDevice(ticket.device_type || '', ticket.repair_service_id || '');
+            document.getElementById('edit-modal').classList.add('open');
+        }
+        function closeEditModal() { document.getElementById('edit-modal').classList.remove('open'); }
+
+        async function updateTicket() {
+            const body = {
+                customer_name: document.getElementById('edit-custname').value.trim(),
+                customer_phone: document.getElementById('edit-phone').value.trim(),
+                client_id: document.getElementById('edit-client').value || null,
+                device_type: document.getElementById('edit-device').value,
+                device_model: document.getElementById('edit-model').value.trim(),
+                repair_service_id: document.getElementById('edit-service').value || null,
+                issue_description: document.getElementById('edit-issue').value.trim(),
+                total_price: document.getElementById('edit-price').value || null,
+                status: document.getElementById('edit-status').value
+            };
+
+            if (!body.customer_name || !body.customer_phone || !body.device_type)
+                return showAlert('edit-alert', 'Customer name, phone, and device type are required', 'error');
+
+            const r = await fetch(`/api/tickets/${editingTicketId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            const d = await r.json();
+            if (d.success) {
+                showAlert('edit-alert', 'Ticket updated successfully', 'success');
+                setTimeout(() => { closeEditModal(); loadTickets(); }, 800);
+            } else {
+                showAlert('edit-alert', d.message, 'error');
+            }
         }
 
         async function createTicket() {

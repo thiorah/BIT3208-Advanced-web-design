@@ -215,6 +215,25 @@ app.post('/api/tickets', requireAuth, requireStaff, async (req, res) => {
     }
 });
 
+// Update a ticket's details — staff only
+app.patch('/api/tickets/:id', requireAuth, requireStaff, async (req, res) => {
+    const { customer_name, customer_phone, device_type, device_model, repair_service_id, issue_description, total_price, status, client_id } = req.body;
+    if (!customer_name || !customer_phone || !device_type)
+        return res.json({ success: false, message: 'Customer name, phone, and device type are required' });
+
+    try {
+        await db.promise().query(
+            `UPDATE repair_tickets
+             SET customer_name = ?, customer_phone = ?, device_type = ?, device_model = ?, repair_service_id = ?, issue_description = ?, total_price = ?, status = ?, client_id = ?
+             WHERE id = ?`,
+            [customer_name, customer_phone, device_type, device_model, repair_service_id || null, issue_description, total_price || null, status || null, client_id || null, req.params.id]
+        );
+        res.json({ success: true, message: 'Ticket updated' });
+    } catch (err) {
+        res.json({ success: false, message: err.message });
+    }
+});
+
 // Update ticket status — staff only
 app.patch('/api/tickets/:id/status', requireAuth, requireStaff, async (req, res) => {
     const { status } = req.body;
